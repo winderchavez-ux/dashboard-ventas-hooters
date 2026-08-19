@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard de ventas · Hooters Colombia</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.refresh-btn{display:inline-flex;align-items:center;gap:6px}
+.refresh-btn[disabled]{opacity:.6;cursor:default}
+.refresh-status{font-size:12px;opacity:.7;margin-left:8px}
+.err-banner{background:#5a1a1a;color:#fff;padding:12px 16px;border-radius:8px;margin:12px 0;font-size:14px}
+.loading-screen{display:flex;align-items:center;justify-content:center;min-height:60vh;font-size:16px;opacity:.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Ventas Hooters Colombia · <span id="hdr-anio">…</span></h1>
+      <p class="sub" id="ctx"></p>
+    </div>
+    <div class="controls">
+      <div class="seg" id="seg-sedes"></div>
+      <button class="icon-btn refresh-btn" id="btn-refresh">🔄 Actualizar</button>
+      <button class="icon-btn" id="btn-tabla">Ver tabla</button>
+      <button class="icon-btn" id="btn-tema">Tema</button>
+      <span class="refresh-status" id="refresh-status"></span>
+    </div>
+  </header>
+
+  <div id="alerta-box"></div>
+
+  <div id="app-content" hidden>
+    <div class="kpis" id="kpis"></div>
+
+    <section class="card" style="--accent: var(--s1)">
+      <h2>Venta semanal · <span id="hdr-anio-2">…</span> vs <span id="hdr-anio-prev-1">…</span></h2>
+      <p class="note">Solo semanas con venta registrada. Pasa el cursor para ver el detalle.</p>
+      <div class="legend" id="lg-semanal"></div>
+      <div id="ch-semanal"></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card" style="--accent: var(--good)">
+        <h2>Diferencia semanal frente a <span id="hdr-anio-prev-2">…</span></h2>
+        <p class="note">Cuánto pesó cada semana, en pesos, contra la misma semana del año anterior.</p>
+        <div class="legend" id="lg-var"></div>
+        <div id="ch-var"></div>
+      </section>
+      <section class="card" style="--accent: var(--s1)">
+        <h2>Acumulado del año</h2>
+        <p class="note">Brecha que se abre o se cierra semana a semana.</p>
+        <div class="legend" id="lg-acum"></div>
+        <div id="ch-acum"></div>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card" style="--accent: var(--s4)">
+        <h2>Mes a mes: venta vs presupuesto</h2>
+        <p class="note">Ventas netas del informe diario contra el presupuesto de cada mes.</p>
+        <div class="legend" id="lg-mes"></div>
+        <div id="ch-mes"></div>
+      </section>
+      <section class="card" style="--accent: var(--s7)">
+        <h2>Patrón por día de la semana</h2>
+        <p class="note">Venta promedio por día, para dimensionar turnos y compras.</p>
+        <div class="legend" id="lg-dia"></div>
+        <div id="ch-dia"></div>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card" style="--accent: var(--s3)">
+        <h2>Cumplimiento del mes por sede</h2>
+        <p class="note" id="nota-sedes"></p>
+        <div id="ch-sedes"></div>
+      </section>
+      <section class="card" style="--accent: var(--s2)">
+        <h2>Aporte de cada sede en el año</h2>
+        <p class="note">Venta acumulada de las semanas comparables.</p>
+        <div class="legend" id="lg-aporte"></div>
+        <div id="ch-aporte"></div>
+      </section>
+    </div>
+
+    <section class="card" style="--accent: var(--s3)">
+      <h2>Mix de venta por sede, semana a semana</h2>
+      <p class="note" id="nota-mix"></p>
+      <div class="legend" id="lg-mix"></div>
+      <div id="ch-mix"></div>
+    </section>
+
+    <section class="card" style="--accent: var(--s2)">
+      <h2>Cumplimiento de presupuesto · sede por mes</h2>
+      <p class="note" id="nota-heat"></p>
+      <div id="ch-heat"></div>
+    </section>
+
+    <section class="card" style="--accent: var(--s7)">
+      <h2>Lectura rápida</h2>
+      <ul id="lecturas"></ul>
+      <p class="note muted" id="nota-lect" style="margin-top:10px"></p>
+    </section>
+
+    <section class="card" id="tabla-card" style="--accent: var(--s1)" hidden>
+      <h2>Detalle semanal</h2>
+      <p class="note">Los mismos datos de las gráficas, en tabla.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Semana</th><th id="th-anio">…</th><th id="th-anio-prev">…</th><th>Diferencia</th><th>Var. %</th><th>Trx</th><th>Tkt prom.</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Generado el <span id="ft-generado"></span> a partir de <span id="ft-archivos"></span>. Las cifras son ventas netas.
+      Este dashboard lee los datos en vivo desde Google Sheets — pulsa "Actualizar" después de alimentar el Excel.
+    </footer>
+  </div>
+
+  <div class="loading-screen" id="loading-screen">Cargando datos de ventas…</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="viz.js"></script>
+<script src="app.js"></script>
+<script src="data.js"></script>
+<script>
+function fillHeaderFooter() {
+  document.getElementById('hdr-anio').textContent = DATA.anio;
+  document.getElementById('hdr-anio-2').textContent = DATA.anio;
+  document.getElementById('hdr-anio-prev-1').textContent = DATA.anio_prev;
+  document.getElementById('hdr-anio-prev-2').textContent = DATA.anio_prev;
+  document.getElementById('th-anio').textContent = DATA.anio;
+  document.getElementById('th-anio-prev').textContent = DATA.anio_prev;
+  document.getElementById('ft-generado').textContent = DATA.generado;
+  document.getElementById('ft-archivos').textContent = DATA.archivos.join(' y ');
+}
+
+async function refrescar(isFirstLoad) {
+  const btn = document.getElementById('btn-refresh');
+  const status = document.getElementById('refresh-status');
+  const alertaBox = document.getElementById('alerta-box');
+  btn.disabled = true;
+  btn.textContent = '⏳ Actualizando…';
+  try {
+    window.DATA = await loadDashboardData();
+    fillHeaderFooter();
+    alertaBox.innerHTML = '';
+    document.getElementById('app-content').hidden = false;
+    document.getElementById('loading-screen').hidden = true;
+    startApp();
+    status.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-CO');
+  } catch (e) {
+    console.error(e);
+    alertaBox.innerHTML = '<div class="err-banner">No se pudieron cargar los datos desde Google Sheets. ' +
+      'Revisa tu conexión o que las hojas sigan compartidas como "Cualquiera con el enlace". Detalle: ' +
+      (e && e.message ? e.message : e) + '</div>';
+    if (isFirstLoad) document.getElementById('loading-screen').hidden = true;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 Actualizar';
+  }
+}
+
+document.getElementById('btn-refresh').addEventListener('click', () => refrescar(false));
+refrescar(true);
+</script>
+</body>
+</html>
