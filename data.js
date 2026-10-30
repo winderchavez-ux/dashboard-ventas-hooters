@@ -139,6 +139,12 @@ function leerDiario(wb) {
       let cnt = 0;
       Object.values(bl.dias).forEach(vals => { cnt += vals.filter(v => v !== null && v !== undefined).length; });
       bl.dias_transcurridos = cnt;
+      // Respaldo: si en el Excel falta la etiqueta "Total Mes Neto" (pasa con Salitre),
+      // calcular el total del mes sumando las ventas netas de cada semana.
+      if (bl.total === null || bl.total === undefined) {
+        const suma = bl.semanas.reduce((a, v) => a + (v || 0), 0);
+        if (suma) bl.total = suma;
+      }
     });
     const dtMax = bloques.length ? Math.max(...bloques.map(b => b.dias_transcurridos)) : 0;
     const diasMesMax = bloques.length ? Math.max(0, ...bloques.map(b => b.dias_mes || 0)) : 0;
